@@ -1,0 +1,108 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local player = game.Players.LocalPlayer
+
+-- [[ CONFIG & REMOTE PATHS ]] --
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local SpinConfig = require(Shared.Config.SpinWheelConfig)
+local SpinRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SpinWheelShared_Spin")
+
+-- [[ UI SETUP ]] --
+local screenGui = Instance.new("ScreenGui", player.PlayerGui)
+screenGui.Name = "SkibidiRemoteUI"
+screenGui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0, 260, 0, 400)
+frame.Position = UDim2.new(0.5, -130, 0.2, 0)
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+frame.Active = true
+frame.Draggable = true
+Instance.new("UICorner", frame)
+Instance.new("UIStroke", frame).Color = Color3.fromRGB(255, 215, 0)
+
+local scroll = Instance.new("ScrollingFrame", frame)
+scroll.Size = UDim2.new(1, -10, 1, -50)
+scroll.Position = UDim2.new(0, 5, 0, 45)
+scroll.BackgroundTransparency = 1
+scroll.CanvasSize = UDim2.new(0, 0, 1.5, 0)
+Instance.new("UIListLayout", scroll).Padding = UDim.new(0, 5)
+
+local function btn(txt, color, func)
+    local b = Instance.new("TextButton", scroll)
+    b.Size = UDim2.new(0.95, 0, 0, 40)
+    b.BackgroundColor3 = color
+    b.Text = txt
+    b.TextColor3 = Color3.new(1,1,1)
+    b.Font = Enum.Font.FredokaOne
+    b.TextSize = 14
+    b.MouseButton1Click:Connect(func)
+    Instance.new("UICorner", b)
+end
+
+-- [[ THE "EVERYTHING" BUTTONS ]] --
+
+-- 1. Give Spins (Targets the specific remote you found)
+btn("GIVE 100 SPINS", Color3.fromRGB(255, 140, 0), function()
+    -- Firing the remote using the Alias "Main" from the config
+    for i = 1, 100 do
+        SpinRemote:FireServer("Main") 
+    end
+end)
+
+-- 2. Buff Rarities (Celestial & 100M Cash)
+btn("BUFF RARITIES (CLIENT)", Color3.fromRGB(150, 0, 255), function()
+    local segments = SpinConfig.Wheels.Main.Segments
+    for _, seg in pairs(segments) do
+        if seg.Reward.Id == "LuckyBlock" and seg.Reward.Variables[1].LuckyBlockId == "Celestial" then
+            seg.Chance = 99 -- Make Celestial almost guaranteed visually
+        elseif seg.Reward.Id == "Currency" and seg.Reward.Variables[2] == 100000000 then
+            seg.Chance = 99 -- Make 100M Cash guaranteed visually
+        else
+            seg.Chance = 0.1 -- Nerf the common stuff
+        end
+    end
+    print("Skibidi Master: Visual Rarities Set to 99%!")
+end)
+
+-- 3. Auto-Spin (Looping the Remote)
+local autoSpin = false
+btn("AUTO-SPIN: OFF", Color3.fromRGB(0, 200, 100), function(b)
+    autoSpin = not autoSpin
+    b.Parent.Text = autoSpin and "AUTO-SPIN: ON" or "AUTO-SPIN: OFF"
+    task.spawn(function()
+        while autoSpin do
+            SpinRemote:FireServer("Main")
+            task.wait(0.5) -- Wait for wheel animation
+        end
+    end)
+end)
+
+-- 4. Movement Toggles
+btn("FLY (F)", Color3.fromRGB(0, 120, 255), function()
+    _G.Flying = not _G.Flying
+end)
+
+btn("NOCLIP", Color3.fromRGB(80, 80, 80), function()
+    _G.Noclip = not _G.Noclip
+end)
+
+-- [[ MOVEMENT LOGIC ]] --
+RunService.Stepped:Connect(function()
+    if _G.Noclip and player.Character then
+        for _, v in pairs(player.Character:GetDescendants()) do
+            if v:IsA("BasePart") then v.CanCollide = false end
+        end
+    end
+end)
+
+-- UI Toggle Keybind
+UserInputService.InputBegan:Connect(function(i, g)
+    if not g and i.KeyCode == Enum.KeyCode.RightAlt then
+        frame.Visible = not frame.Visible
+    end
+end)
+
+print("SKIBIDI REMOTE MASTER LOADED - Remote: SpinWheelShared_Spin")
