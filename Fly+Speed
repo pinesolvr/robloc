@@ -8,83 +8,101 @@ local rootPart = character:WaitForChild("HumanoidRootPart")
 
 -- UI Setup
 local screenGui = Instance.new("ScreenGui", player.PlayerGui)
-screenGui.Name = "BrainrotStudUI"
+screenGui.Name = "CelestialStudUI"
 screenGui.ResetOnSpawn = false
 
--- Main Frame
+-- Main Frame (Modern Dark Style)
 local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 260, 0, 420)
+frame.Size = UDim2.new(0, 260, 0, 450)
 frame.Position = UDim2.new(0.5, -130, 0.2, 0)
-frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 frame.BorderSizePixel = 0
 frame.Active = true
 frame.Draggable = true
 Instance.new("UICorner", frame)
 
--- Title
 local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1, 0, 0, 35)
+title.Size = UDim2.new(1, 0, 0, 40)
 title.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
-title.Text = "BRAINROT SAILING HUB"
+title.Text = "CELESTIAL BRAINROT"
 title.TextColor3 = Color3.new(0,0,0)
 title.Font = Enum.Font.FredokaOne
 title.TextSize = 18
 Instance.new("UICorner", title)
 
 -- Variables
-local boatWalkSpeed = 16
+local flySpeed = 100
+local flying = false
 local sharksFrozen = false
+local bv, bg -- Body objects for flying
 
--- Button Creator
+-- Optimized Button Function
 local function createBtn(text, pos, color, callback)
     local btn = Instance.new("TextButton", frame)
-    btn.Size = UDim2.new(0.8, 0, 0, 35)
+    btn.Size = UDim2.new(0.85, 0, 0, 35)
     btn.Position = pos
     btn.BackgroundColor3 = color
     btn.Text = text
-    btn.Font = Enum.Font.FredokaOne
+    btn.Font = Enum.Font.SourceSansBold
     btn.TextColor3 = Color3.new(1,1,1)
-    btn.TextSize = 14
+    btn.TextSize = 16
     Instance.new("UICorner", btn)
     btn.MouseButton1Click:Connect(callback)
     return btn
 end
 
--- Freeze Sharks Logic
-local freezeBtn = createBtn("FREEZE SHARKS: OFF", UDim2.new(0.1, 0, 0.12, 0), Color3.fromRGB(100, 0, 0), function()
+-- 1. FLY LOGIC (REFIXED)
+local function toggleFly()
+    flying = not flying
+    if flying then
+        humanoid.PlatformStand = true
+        bv = Instance.new("BodyVelocity", rootPart)
+        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bv.Velocity = Vector3.new(0,0,0)
+        
+        bg = Instance.new("BodyGyro", rootPart)
+        bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        bg.P = 15000
+    else
+        if bv then bv:Destroy() end
+        if bg then bg:Destroy() end
+        humanoid.PlatformStand = false
+    end
+end
+
+createBtn("TOGGLE FLY (F)", UDim2.new(0.075, 0, 0.12, 0), Color3.fromRGB(80, 80, 80), toggleFly)
+
+-- 2. FREEZE SHARKS (LAG-FREE)
+createBtn("FREEZE SHARKS", UDim2.new(0.075, 0, 0.22, 0), Color3.fromRGB(0, 120, 200), function()
     sharksFrozen = not sharksFrozen
+    print("Sharks Frozen: " .. tostring(sharksFrozen))
 end)
 
-RunService.Heartbeat:Connect(function()
-    if sharksFrozen then
-        for _, v in pairs(workspace:GetDescendants()) do
-            if v.Name:find("Shark") and v:IsA("Model") then
-                local rp = v:FindFirstChild("HumanoidRootPart") or v.PrimaryPart
-                if rp then rp.Anchored = true end
+task.spawn(function()
+    while task.wait(1) do -- Only checks once per second to stop lag
+        if sharksFrozen then
+            for _, v in pairs(workspace:GetDescendants()) do
+                if v.Name:lower():find("shark") and v:IsA("BasePart") then
+                    v.Anchored = true
+                end
             end
         end
     end
 end)
 
--- Spawn Brainrot Logic
-createBtn("SPAWN BRAINROT", UDim2.new(0.1, 0, 0.23, 0), Color3.fromRGB(0, 150, 0), function()
-    -- Attempts to fire common spawn remotes found in brainrot games
-    local remote = game:GetService("ReplicatedStorage"):FindFirstChild("SpawnBrainrot") or 
-                   game:GetService("ReplicatedStorage"):FindFirstChild("Summon")
-    if remote and remote:IsA("RemoteEvent") then
-        remote:FireServer()
-    else
-        print("Brainrot Remote Not Found")
+-- 3. SPAWN CELESTIAL
+createBtn("SPAWN CELESTIAL", UDim2.new(0.075, 0, 0.32, 0), Color3.fromRGB(255, 100, 0), function()
+    local remotes = {
+        game:GetService("ReplicatedStorage"):FindFirstChild("SpawnCelestial"),
+        game:GetService("ReplicatedStorage"):FindFirstChild("SummonCelestial"),
+        game:GetService("ReplicatedStorage"):FindFirstChild("CelestialRemote")
+    }
+    for _, r in pairs(remotes) do
+        if r then r:FireServer() end
     end
 end)
 
--- Fly Toggle
-local flying = false
-local flyBtn = createBtn("FLY: OFF", UDim2.new(0.1, 0, 0.34, 0), Color3.fromRGB(50, 50, 50), function()
-    flying = not flying
-end)
-
--- Slider Logic for Boat/Walk Speed
+-- 4. BOAT / WALK SPEED SLIDER
 local function createSlider(labelName, pos, min, max, default, callback)
     local label = Instance.new("TextLabel", frame)
     label.Size = UDim2.new(0.8, 0, 0, 20)
@@ -95,56 +113,58 @@ local function createSlider(labelName, pos, min, max, default, callback)
     label.Font = Enum.Font.SourceSansBold
 
     local track = Instance.new("Frame", frame)
-    track.Size = UDim2.new(0.8, 0, 0, 6)
+    track.Size = UDim2.new(0.85, 0, 0, 6)
     track.Position = pos + UDim2.new(0, 0, 0, 22)
-    track.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    track.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 
     local thumb = Instance.new("TextButton", track)
-    thumb.Size = UDim2.new(0, 15, 0, 15)
+    thumb.Size = UDim2.new(0, 14, 0, 14)
     thumb.Position = UDim2.new(0, 0, 0.5, -7)
     thumb.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
     thumb.Text = ""
 
     local dragging = false
     thumb.MouseButton1Down:Connect(function() dragging = true end)
-    UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+    UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
     
     RunService.RenderStepped:Connect(function()
         if dragging then
-            local relativePos = math.clamp((UserInputService:GetMouseLocation().X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
-            thumb.Position = UDim2.new(relativePos, -7, 0.5, -7)
-            local val = math.floor(min + (relativePos * (max - min)))
+            local rel = math.clamp((UserInputService:GetMouseLocation().X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+            thumb.Position = UDim2.new(rel, -7, 0.5, -7)
+            local val = math.floor(min + (rel * (max - min)))
             label.Text = labelName .. ": " .. val
             callback(val)
         end
     end)
 end
 
--- Updated: Walk Speed Slider (This also speeds up the boat!)
-createSlider("Boat & Walk Speed", UDim2.new(0.1, 0, 0.55, 0), 16, 1000, 16, function(v)
-    boatWalkSpeed = v
+createSlider("Boat/Walk Speed", UDim2.new(0.075, 0, 0.45, 0), 16, 1500, 16, function(v)
     humanoid.WalkSpeed = v
 end)
 
--- Fly System
+createSlider("Fly Speed", UDim2.new(0.075, 0, 0.60, 0), 10, 500, 100, function(v)
+    flySpeed = v
+end)
+
+-- FLY LOOP
 RunService.RenderStepped:Connect(function()
-    flyBtn.Text = "FLY: " .. (flying and "ON" or "OFF")
-    if flying then
-        humanoid.PlatformStand = true
-        local moveDir = Vector3.new(0,0,0)
+    if flying and bv and bg then
         local cam = workspace.CurrentCamera.CFrame
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir += cam.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir -= cam.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir -= cam.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir += cam.RightVector end
+        local dir = Vector3.new(0,0,0)
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir += cam.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir -= cam.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir -= cam.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir += cam.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir += Vector3.new(0,1,0) end
         
-        rootPart.Velocity = moveDir * 100 -- Constant fly speed
-    elseif not flying and humanoid.PlatformStand then
-        humanoid.PlatformStand = false
+        bg.CFrame = cam
+        bv.Velocity = dir * flySpeed
     end
 end)
 
--- Right Alt to Hide
+-- HOTKEYS
 UserInputService.InputBegan:Connect(function(i, g)
-    if not g and i.KeyCode == Enum.KeyCode.RightAlt then frame.Visible = not frame.Visible end
+    if g then return end
+    if i.KeyCode == Enum.KeyCode.F then toggleFly() end
+    if i.KeyCode == Enum.KeyCode.RightAlt then frame.Visible = not frame.Visible end
 end)
