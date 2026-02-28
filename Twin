@@ -1,12 +1,8 @@
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local rootPart = character:WaitForChild("HumanoidRootPart")
-local humanoid = character:WaitForChild("Humanoid")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 
--- [[ GLOBAL STATES ]] --
+-- [[ SETTINGS ]] --
 _G.GodMode = false
 _G.AutoTP = false
 _G.Noclip = false
@@ -14,77 +10,19 @@ _G.Flying = false
 local flySpeed = 75
 local baseCFrame = rootPart.CFrame
 
--- [[ 1. THE "TRUE" GOD MODE (Metatable Hook) ]] --
-local mt = getrawmetatable(game)
-local oldNamecall = mt.__namecall
-setreadonly(mt, false)
-mt.__namecall = newcclosure(function(self, ...)
-    local method = getnamecallmethod()
-    if _G.GodMode and method == "TakeDamage" then return nil end
-    return oldNamecall(self, ...)
-end)
-setreadonly(mt, true)
+-- [[ UI EMERGENCY FIX ]] --
+local existingUI = player.PlayerGui:FindFirstChild("StudMasterUI")
+if existingUI then existingUI:Destroy() end
 
--- [[ 2. AUTO-TP COLLECTOR ]] --
-task.spawn(function()
-    while task.wait(0.6) do
-        if _G.AutoTP then
-            for _, v in pairs(workspace:GetDescendants()) do
-                if (v.Name:find("Block") or v.Name:find("Rot") or v.Name:find("Lucky")) then
-                    local target = v:IsA("BasePart") and v or v:FindFirstChildWhichIsA("BasePart")
-                    if target then
-                        local oldPos = rootPart.CFrame
-                        rootPart.CFrame = target.CFrame
-                        firetouchinterest(rootPart, target, 0)
-                        task.wait(0.1)
-                        firetouchinterest(rootPart, target, 1)
-                        rootPart.CFrame = oldPos
-                    end
-                end
-            end
-        end
-    end
-end)
-
--- [[ 3. FLY & NOCLIP HANDLERS ]] --
-local function toggleFly()
-    _G.Flying = not _G.Flying
-    if _G.Flying then
-        local bv = Instance.new("BodyVelocity", rootPart)
-        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-        bv.Velocity = Vector3.new(0,0.1,0)
-        bv.Name = "StudFlight"
-        task.spawn(function()
-            while _G.Flying do
-                local cam = workspace.CurrentCamera.CFrame
-                local dir = Vector3.new(0,0,0)
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.RightVector end
-                bv.Velocity = dir * flySpeed
-                task.wait()
-            end
-            if rootPart:FindFirstChild("StudFlight") then rootPart.StudFlight:Destroy() end
-        end)
-    end
-end
-
-RunService.Stepped:Connect(function()
-    if _G.Noclip then
-        for _, v in pairs(character:GetDescendants()) do
-            if v:IsA("BasePart") then v.CanCollide = false end
-        end
-    end
-end)
-
--- [[ 4. MAIN UI CONSTRUCTION ]] --
 local screenGui = Instance.new("ScreenGui", player.PlayerGui)
+screenGui.Name = "StudMasterUI"
+screenGui.ResetOnSpawn = false -- Keeps UI visible after death
+
 local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 320, 0, 580)
-frame.Position = UDim2.new(0.5, -160, 0.1, 0)
-frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-frame.BorderSizePixel = 4
+frame.Size = UDim2.new(0, 300, 0, 500)
+frame.Position = UDim2.new(0.5, -150, 0.2, 0)
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+frame.BorderSizePixel = 3
 frame.BorderColor3 = Color3.fromRGB(255, 215, 0)
 frame.Active = true
 frame.Draggable = true
@@ -92,9 +30,10 @@ frame.Draggable = true
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0, 40)
 title.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
-title.Text = "STUD STUDIO MASTER"
+title.Text = "STUD MASTER: RECOVERED"
+title.TextColor3 = Color3.new(0,0,0)
 title.Font = Enum.Font.FredokaOne
-title.TextSize = 20
+title.TextSize = 18
 
 local scroll = Instance.new("ScrollingFrame", frame)
 scroll.Size = UDim2.new(1, -10, 1, -50)
@@ -103,6 +42,7 @@ scroll.BackgroundTransparency = 1
 scroll.CanvasSize = UDim2.new(0, 0, 2, 0)
 Instance.new("UIListLayout", scroll).Padding = UDim.new(0, 5)
 
+-- Button Function
 local function btn(txt, color, func)
     local b = Instance.new("TextButton", scroll)
     b.Size = UDim2.new(0.95, 0, 0, 35)
@@ -114,36 +54,89 @@ local function btn(txt, color, func)
     Instance.new("UICorner", b)
 end
 
--- [[ BUTTON ASSIGNMENTS ]] --
-btn("AUTO TP-COLLECT (TOGGLE)", Color3.fromRGB(150, 0, 255), function() _G.AutoTP = not _G.AutoTP end)
-btn("GOD MODE (ON/OFF)", Color3.fromRGB(0, 150, 0), function() _G.GodMode = not _G.GodMode end)
-btn("FLY: TOGGLE (F)", Color3.fromRGB(200, 0, 0), toggleFly)
-btn("NOCLIP: TOGGLE", Color3.fromRGB(100, 100, 100), function() _G.Noclip = not _G.Noclip end)
-btn("999 SPINS (REMOTE SPAM)", Color3.fromRGB(255, 150, 0), function()
-    local r = game:GetService("ReplicatedStorage"):FindFirstChild("Spin", true)
-    if r then for i=1, 50 do r:FireServer() r:InvokeServer() end end
+-- [[ THE "EVERYTHING" LOGIC ]] --
+
+-- 1. Fixed God Mode
+task.spawn(function()
+    while task.wait() do
+        if _G.GodMode and player.Character then
+            local hum = player.Character:FindFirstChildOfClass("Humanoid")
+            if hum then 
+                hum.Health = hum.MaxHealth 
+                -- Prevents "Stuck in Void"
+                if player.Character.PrimaryPart.Position.Y < -500 then
+                    player.Character.PrimaryPart.CFrame = baseCFrame
+                end
+            end
+        end
+    end
 end)
-btn("FREE JAIL SHARK (FORCE)", Color3.fromRGB(0, 50, 200), function()
+
+-- 2. Auto TP-Collector
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.AutoTP and player.Character then
+            for _, v in pairs(workspace:GetDescendants()) do
+                if (v.Name:find("Block") or v.Name:find("Rot") or v.Name:find("Lucky")) then
+                    local target = v:IsA("BasePart") and v or v:FindFirstChildWhichIsA("BasePart")
+                    if target then
+                        local lastPos = player.Character.PrimaryPart.CFrame
+                        player.Character.PrimaryPart.CFrame = target.CFrame
+                        firetouchinterest(player.Character.PrimaryPart, target, 0)
+                        task.wait(0.1)
+                        firetouchinterest(player.Character.PrimaryPart, target, 1)
+                        player.Character.PrimaryPart.CFrame = lastPos
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- [[ BUTTON ASSIGNMENTS ]] --
+btn("AUTO TP-COLLECT: TOGGLE", Color3.fromRGB(150, 0, 255), function() _G.AutoTP = not _G.AutoTP end)
+btn("GOD MODE: TOGGLE", Color3.fromRGB(0, 150, 0), function() _G.GodMode = not _G.GodMode end)
+btn("FLY: TOGGLE (F)", Color3.fromRGB(200, 0, 0), function() _G.Flying = not _G.Flying end) -- Logic handled below
+btn("NOCLIP: TOGGLE", Color3.fromRGB(100, 100, 100), function() _G.Noclip = not _G.Noclip end)
+btn("GIVE 999 SPINS (UI)", Color3.fromRGB(255, 150, 0), function()
+    for _, v in pairs(player.PlayerGui:GetDescendants()) do
+        if v:IsA("TextLabel") and (v.Text:find("Spins") or v.Name:find("Spin")) then v.Text = "999 Spins" end
+    end
+end)
+btn("FORCE JAIL SHARK", Color3.fromRGB(0, 50, 200), function()
     local r = game:GetService("ReplicatedStorage"):FindFirstChild("JailShark", true)
     if r then r:FireServer("Spawn", true) end
 end)
-btn("DISABLE ALL SHARKS", Color3.fromRGB(200, 0, 50), function()
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v.Name:lower():find("shark") and v:IsA("Model") then v:MoveTo(Vector3.new(0, -1000, 0)) end
+btn("TP TO BASE", Color3.fromRGB(80, 80, 80), function() player.Character.PrimaryPart.CFrame = baseCFrame end)
+btn("SET BASE HERE", Color3.fromRGB(40, 40, 40), function() baseCFrame = player.Character.PrimaryPart.CFrame end)
+
+-- [[ MOVEMENT HANDLERS ]] --
+game:GetService("RunService").Stepped:Connect(function()
+    if _G.Noclip and player.Character then
+        for _, v in pairs(player.Character:GetDescendants()) do
+            if v:IsA("BasePart") then v.CanCollide = false end
+        end
     end
 end)
-btn("STUDIO HIERARCHY (F9)", Color3.fromRGB(50, 50, 50), function()
-    print("--- HIERARCHY ---")
-    for _, child in pairs(game:GetChildren()) do print(child.ClassName .. ": " .. child.Name) end
-end)
-btn("TP TO BASE", Color3.fromRGB(70, 70, 70), function() rootPart.CFrame = baseCFrame end)
-btn("SET BASE HERE", Color3.fromRGB(40, 40, 40), function() baseCFrame = rootPart.CFrame end)
 
--- [[ KEYBINDS ]] --
-UserInputService.InputBegan:Connect(function(i, g)
+-- Fly logic
+task.spawn(function()
+    while task.wait() do
+        if _G.Flying and player.Character then
+            local p = player.Character.PrimaryPart
+            local cam = workspace.CurrentCamera.CFrame
+            local move = Vector3.new(0,0,0)
+            if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.W) then move = move + cam.LookVector end
+            if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.S) then move = move - cam.LookVector end
+            p.Velocity = move * flySpeed
+        end
+    end
+end)
+
+-- Keybind to Toggle Menu
+game:GetService("UserInputService").InputBegan:Connect(function(i, g)
     if g then return end
-    if i.KeyCode == Enum.KeyCode.F then toggleFly() end
     if i.KeyCode == Enum.KeyCode.RightAlt then frame.Visible = not frame.Visible end
 end)
 
-print("STUD MASTER LOADED - Press RightAlt to hide UI")
+print("STUD MASTER RECOVERED - Press RightAlt to Toggle")
