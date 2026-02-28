@@ -8,14 +8,14 @@ local rootPart = character:WaitForChild("HumanoidRootPart")
 
 -- UI Setup
 local screenGui = Instance.new("ScreenGui", player.PlayerGui)
-screenGui.Name = "CelestialStudUI"
+screenGui.Name = "FinalBrainrotUI"
 screenGui.ResetOnSpawn = false
 
--- Main Frame (Modern Dark Style)
+-- Main Frame
 local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 260, 0, 450)
+frame.Size = UDim2.new(0, 260, 0, 480)
 frame.Position = UDim2.new(0.5, -130, 0.2, 0)
-frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+frame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 frame.BorderSizePixel = 0
 frame.Active = true
 frame.Draggable = true
@@ -23,89 +23,96 @@ Instance.new("UICorner", frame)
 
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0, 40)
-title.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
-title.Text = "CELESTIAL BRAINROT"
-title.TextColor3 = Color3.new(0,0,0)
+title.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Aggressive Red
+title.Text = "STUD BRAINROT V4"
+title.TextColor3 = Color3.new(1,1,1)
 title.Font = Enum.Font.FredokaOne
-title.TextSize = 18
+title.TextSize = 20
 Instance.new("UICorner", title)
 
 -- Variables
 local flySpeed = 100
 local flying = false
-local sharksFrozen = false
-local bv, bg -- Body objects for flying
+local sharksBanished = false
+local bv, bg
 
--- Optimized Button Function
+-- Helper: Remote Invoker (For Spins/Spawns)
+local function fireGameRemotes(keyword)
+    for _, v in pairs(game:GetDescendants()) do
+        if v:IsA("RemoteEvent") and v.Name:lower():find(keyword:lower()) then
+            v:FireServer()
+            v:FireServer(true) -- Some remotes require a boolean
+        end
+    end
+end
+
+-- Button Logic
 local function createBtn(text, pos, color, callback)
     local btn = Instance.new("TextButton", frame)
-    btn.Size = UDim2.new(0.85, 0, 0, 35)
+    btn.Size = UDim2.new(0.9, 0, 0, 35)
     btn.Position = pos
     btn.BackgroundColor3 = color
     btn.Text = text
     btn.Font = Enum.Font.SourceSansBold
     btn.TextColor3 = Color3.new(1,1,1)
-    btn.TextSize = 16
+    btn.TextSize = 14
     Instance.new("UICorner", btn)
     btn.MouseButton1Click:Connect(callback)
     return btn
 end
 
--- 1. FLY LOGIC (REFIXED)
-local function toggleFly()
-    flying = not flying
-    if flying then
-        humanoid.PlatformStand = true
-        bv = Instance.new("BodyVelocity", rootPart)
-        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-        bv.Velocity = Vector3.new(0,0,0)
-        
-        bg = Instance.new("BodyGyro", rootPart)
-        bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-        bg.P = 15000
-    else
-        if bv then bv:Destroy() end
-        if bg then bg:Destroy() end
-        humanoid.PlatformStand = false
-    end
-end
+-- 1. GIVE SPINS
+createBtn("GET FREE SPINS", UDim2.new(0.05, 0, 0.12, 0), Color3.fromRGB(0, 150, 0), function()
+    fireGameRemotes("spin")
+    fireGameRemotes("reward")
+    fireGameRemotes("daily")
+end)
 
-createBtn("TOGGLE FLY (F)", UDim2.new(0.075, 0, 0.12, 0), Color3.fromRGB(80, 80, 80), toggleFly)
+-- 2. SPAWN CELESTIAL / BRAINROT
+createBtn("SPAWN CELESTIAL", UDim2.new(0.05, 0, 0.21, 0), Color3.fromRGB(200, 100, 0), function()
+    fireGameRemotes("spawn")
+    fireGameRemotes("celestial")
+    fireGameRemotes("summon")
+end)
 
--- 2. FREEZE SHARKS (LAG-FREE)
-createBtn("FREEZE SHARKS", UDim2.new(0.075, 0, 0.22, 0), Color3.fromRGB(0, 120, 200), function()
-    sharksFrozen = not sharksFrozen
-    print("Sharks Frozen: " .. tostring(sharksFrozen))
+-- 3. BANISH SHARKS (They won't follow you anymore)
+createBtn("BANISH SHARKS: OFF", UDim2.new(0.05, 0, 0.30, 0), Color3.fromRGB(0, 0, 150), function(btn)
+    sharksBanished = not sharksBanished
+    btn.Parent.Text = "BANISH SHARKS: " .. (sharksBanished and "ON" or "OFF")
 end)
 
 task.spawn(function()
-    while task.wait(1) do -- Only checks once per second to stop lag
-        if sharksFrozen then
+    while task.wait(0.5) do
+        if sharksBanished then
             for _, v in pairs(workspace:GetDescendants()) do
-                if v.Name:lower():find("shark") and v:IsA("BasePart") then
-                    v.Anchored = true
+                if v.Name:lower():find("shark") and v:IsA("Model") then
+                    v:MoveTo(Vector3.new(v.PrimaryPart.Position.X, -500, v.PrimaryPart.Position.Z))
                 end
             end
         end
     end
 end)
 
--- 3. SPAWN CELESTIAL
-createBtn("SPAWN CELESTIAL", UDim2.new(0.075, 0, 0.32, 0), Color3.fromRGB(255, 100, 0), function()
-    local remotes = {
-        game:GetService("ReplicatedStorage"):FindFirstChild("SpawnCelestial"),
-        game:GetService("ReplicatedStorage"):FindFirstChild("SummonCelestial"),
-        game:GetService("ReplicatedStorage"):FindFirstChild("CelestialRemote")
-    }
-    for _, r in pairs(remotes) do
-        if r then r:FireServer() end
+-- 4. FLY (Fixed Controls)
+createBtn("FLY (F)", UDim2.new(0.05, 0, 0.39, 0), Color3.fromRGB(60, 60, 60), function()
+    flying = not flying
+    if flying then
+        humanoid.PlatformStand = true
+        bv = Instance.new("BodyVelocity", rootPart)
+        bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        bg = Instance.new("BodyGyro", rootPart)
+        bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    else
+        if bv then bv:Destroy() end
+        if bg then bg:Destroy() end
+        humanoid.PlatformStand = false
     end
 end)
 
--- 4. BOAT / WALK SPEED SLIDER
+-- 5. SPEED SLIDER
 local function createSlider(labelName, pos, min, max, default, callback)
     local label = Instance.new("TextLabel", frame)
-    label.Size = UDim2.new(0.8, 0, 0, 20)
+    label.Size = UDim2.new(0.9, 0, 0, 20)
     label.Position = pos
     label.Text = labelName .. ": " .. default
     label.TextColor3 = Color3.new(1,1,1)
@@ -113,14 +120,14 @@ local function createSlider(labelName, pos, min, max, default, callback)
     label.Font = Enum.Font.SourceSansBold
 
     local track = Instance.new("Frame", frame)
-    track.Size = UDim2.new(0.85, 0, 0, 6)
+    track.Size = UDim2.new(0.9, 0, 0, 6)
     track.Position = pos + UDim2.new(0, 0, 0, 22)
     track.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 
     local thumb = Instance.new("TextButton", track)
     thumb.Size = UDim2.new(0, 14, 0, 14)
     thumb.Position = UDim2.new(0, 0, 0.5, -7)
-    thumb.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+    thumb.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
     thumb.Text = ""
 
     local dragging = false
@@ -138,15 +145,15 @@ local function createSlider(labelName, pos, min, max, default, callback)
     end)
 end
 
-createSlider("Boat/Walk Speed", UDim2.new(0.075, 0, 0.45, 0), 16, 1500, 16, function(v)
+createSlider("Boat/Walk Speed", UDim2.new(0.05, 0, 0.55, 0), 16, 2000, 16, function(v)
     humanoid.WalkSpeed = v
 end)
 
-createSlider("Fly Speed", UDim2.new(0.075, 0, 0.60, 0), 10, 500, 100, function(v)
+createSlider("Fly Speed", UDim2.new(0.05, 0, 0.72, 0), 10, 1000, 100, function(v)
     flySpeed = v
 end)
 
--- FLY LOOP
+-- Fly Processing
 RunService.RenderStepped:Connect(function()
     if flying and bv and bg then
         local cam = workspace.CurrentCamera.CFrame
@@ -156,15 +163,28 @@ RunService.RenderStepped:Connect(function()
         if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir -= cam.RightVector end
         if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir += cam.RightVector end
         if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir += Vector3.new(0,1,0) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then dir -= Vector3.new(0,1,0) end
         
         bg.CFrame = cam
         bv.Velocity = dir * flySpeed
     end
 end)
 
--- HOTKEYS
+-- Toggle Menu
 UserInputService.InputBegan:Connect(function(i, g)
-    if g then return end
-    if i.KeyCode == Enum.KeyCode.F then toggleFly() end
-    if i.KeyCode == Enum.KeyCode.RightAlt then frame.Visible = not frame.Visible end
+    if not g and i.KeyCode == Enum.KeyCode.RightAlt then frame.Visible = not frame.Visible end
+    if not g and i.KeyCode == Enum.KeyCode.F then -- Quick Fly Hotkey
+        flying = not flying
+        if not flying then
+            if bv then bv:Destroy() end
+            if bg then bg:Destroy() end
+            humanoid.PlatformStand = false
+        else
+            humanoid.PlatformStand = true
+            bv = Instance.new("BodyVelocity", rootPart)
+            bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+            bg = Instance.new("BodyGyro", rootPart)
+            bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+        end
+    end
 end)
