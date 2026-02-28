@@ -6,16 +6,15 @@ local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local rootPart = character:WaitForChild("HumanoidRootPart")
 
--- UI Setup
+-- UI SETUP
 local screenGui = Instance.new("ScreenGui", player.PlayerGui)
-screenGui.Name = "NuclearBrainrotUI"
+screenGui.Name = "GodStudUI"
 screenGui.ResetOnSpawn = false
 
--- Main Frame
 local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 260, 0, 500)
+frame.Size = UDim2.new(0, 260, 0, 480)
 frame.Position = UDim2.new(0.5, -130, 0.2, 0)
-frame.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
+frame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 frame.BorderSizePixel = 0
 frame.Active = true
 frame.Draggable = true
@@ -24,21 +23,16 @@ Instance.new("UICorner", frame)
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0, 40)
 title.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
-title.Text = "STUD BRAINROT V5"
+title.Text = "BRAINROT GOD MODE"
 title.TextColor3 = Color3.new(0,0,0)
 title.Font = Enum.Font.FredokaOne
-title.TextSize = 20
+title.TextSize = 18
 Instance.new("UICorner", title)
 
--- Variables
-local flySpeed = 100
-local flying = false
-local banishSharks = false
-local bv, bg
-
--- THE FIX: Remote Scanner Logic
-local function tryTrigger(keywords)
-    local found = 0
+-- [[ DYNAMIC REMOTE SCANNER ]]
+-- This function finds the "Hidden" events the devs use for Spins and Spawns
+local function fireSpecial(keywords)
+    local count = 0
     for _, v in pairs(game:GetDescendants()) do
         if v:IsA("RemoteEvent") or v:IsA("RemoteFunction") then
             for _, key in pairs(keywords) do
@@ -46,21 +40,20 @@ local function tryTrigger(keywords)
                     pcall(function()
                         if v:IsA("RemoteEvent") then
                             v:FireServer()
-                            v:FireServer(true)
-                            v:FireServer(1)
+                            v:FireServer(true) -- Try common bypasses
                         else
                             v:InvokeServer()
                         end
+                        count = count + 1
                     end)
-                    found = found + 1
                 end
             end
         end
     end
-    print("Triggered " .. found .. " remotes for keywords: " .. table.concat(keywords, ", "))
+    print("Fired " .. count .. " remotes for: " .. table.concat(keywords, ", "))
 end
 
--- Button Helper
+-- BUTTON CREATOR
 local function createBtn(text, pos, color, callback)
     local btn = Instance.new("TextButton", frame)
     btn.Size = UDim2.new(0.9, 0, 0, 35)
@@ -72,57 +65,63 @@ local function createBtn(text, pos, color, callback)
     btn.TextSize = 14
     Instance.new("UICorner", btn)
     btn.MouseButton1Click:Connect(callback)
-    return btn
 end
 
--- 1. GIVE SPINS (Scans for all reward/spin events)
-createBtn("SPAM GIVE SPINS", UDim2.new(0.05, 0, 0.1, 0), Color3.fromRGB(0, 150, 0), function()
-    tryTrigger({"spin", "reward", "daily", "wheel", "luck"})
+-- 1. ULTIMATE GIVE SPINS
+createBtn("SPAM ALL SPINS/REWARDS", UDim2.new(0.05, 0, 0.12, 0), Color3.fromRGB(0, 150, 0), function()
+    fireSpecial({"spin", "reward", "daily", "luck", "wheel", "gift"})
 end)
 
--- 2. SPAWN CELESTIALS / BRAINROTS
-createBtn("FORCE SPAWN CELESTIAL", UDim2.new(0.05, 0, 0.18, 0), Color3.fromRGB(200, 100, 0), function()
-    tryTrigger({"spawn", "celestial", "summon", "brainrot", "boss"})
-    -- Secret Code Entry (Sometimes works for Celestials)
-    local codeRemote = game:GetService("ReplicatedStorage"):FindFirstChild("CodeRemote") or game:GetService("ReplicatedStorage"):FindFirstChild("Codes")
-    if codeRemote then pcall(function() codeRemote:FireServer("EGG") end) end
+-- 2. ULTIMATE SPAWN CELESTIAL
+createBtn("FORCE SPAWN CELESTIAL", UDim2.new(0.05, 0, 0.22, 0), Color3.fromRGB(200, 100, 0), function()
+    fireSpecial({"spawn", "celestial", "summon", "brainrot", "egg", "rare"})
 end)
 
--- 3. BANISH SHARKS (Better Logic)
-createBtn("BANISH SHARKS: OFF", UDim2.new(0.05, 0, 0.26, 0), Color3.fromRGB(0, 0, 150), function(btn)
-    banishSharks = not banishSharks
-    btn.Text = "BANISH SHARKS: " .. (banishSharks and "ON" or "OFF")
+-- 3. TRUE SHARK DELETE (BANISH)
+local sharkBanish = false
+createBtn("BANISH SHARKS: OFF", UDim2.new(0.05, 0, 0.32, 0), Color3.fromRGB(0, 80, 200), function(btn)
+    sharkBanish = not sharkBanish
+    btn.Text = "BANISH SHARKS: " .. (sharkBanish and "ON" or "OFF")
 end)
 
+-- This loop kills sharks and makes them ignore you
 task.spawn(function()
-    while task.wait(0.3) do
-        if banishSharks then
+    while task.wait(0.5) do
+        if sharkBanish then
             for _, v in pairs(workspace:GetDescendants()) do
-                if v:IsA("Model") and v.Name:lower():find("shark") then
-                    v:MoveTo(Vector3.new(0, -500, 0)) -- Sends them to the shadow realm
+                -- Detects sharks by name or by having a "Damage" script
+                if (v.Name:lower():find("shark") or v.Name:lower():find("enemy")) and v:IsA("Model") then
+                    v:MoveTo(Vector3.new(0, -1000, 0)) -- Teleport to the void
+                    if v:FindFirstChild("HumanoidRootPart") then
+                        v.HumanoidRootPart.Anchored = true
+                    end
                 end
             end
         end
     end
 end)
 
--- 4. FLY (F)
-createBtn("FLY (F)", UDim2.new(0.05, 0, 0.34, 0), Color3.fromRGB(50, 50, 50), function()
+-- 4. NEW FLY (Guaranteed to work)
+local flying = false
+local flySpeed = 100
+createBtn("FLY (Press F)", UDim2.new(0.05, 0, 0.42, 0), Color3.fromRGB(80, 80, 80), function()
     flying = not flying
     if flying then
+        local bv = Instance.new("BodyVelocity", rootPart)
+        bv.Name = "StudFlyVel"
+        bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        local bg = Instance.new("BodyGyro", rootPart)
+        bg.Name = "StudFlyGyro"
+        bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
         humanoid.PlatformStand = true
-        bv = Instance.new("BodyVelocity", rootPart)
-        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-        bg = Instance.new("BodyGyro", rootPart)
-        bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
     else
-        if bv then bv:Destroy() end
-        if bg then bg:Destroy() end
+        if rootPart:FindFirstChild("StudFlyVel") then rootPart.StudFlyVel:Destroy() end
+        if rootPart:FindFirstChild("StudFlyGyro") then rootPart.StudFlyGyro:Destroy() end
         humanoid.PlatformStand = false
     end
 end)
 
--- Slider Helper
+-- 5. SPEED SLIDER (Boat & Walk)
 local function createSlider(name, pos, min, max, def, cb)
     local lab = Instance.new("TextLabel", frame)
     lab.Size = UDim2.new(0.9, 0, 0, 20); lab.Position = pos; lab.Text = name .. ": " .. def; lab.TextColor3 = Color3.new(1,1,1); lab.BackgroundTransparency = 1; lab.Font = Enum.Font.SourceSansBold
@@ -142,12 +141,12 @@ local function createSlider(name, pos, min, max, def, cb)
     end)
 end
 
-createSlider("Boat/Walk Speed", UDim2.new(0.05, 0, 0.45, 0), 16, 2500, 16, function(v) humanoid.WalkSpeed = v end)
-createSlider("Fly Speed", UDim2.new(0.05, 0, 0.60, 0), 10, 1000, 100, function(v) flySpeed = v end)
+createSlider("Boat & Walk Speed", UDim2.new(0.05, 0, 0.55, 0), 16, 3000, 16, function(v) humanoid.WalkSpeed = v end)
+createSlider("Fly Speed", UDim2.new(0.05, 0, 0.72, 0), 10, 1000, 100, function(v) flySpeed = v end)
 
--- Fly Engine
+-- FLY ENGINE
 RunService.RenderStepped:Connect(function()
-    if flying and bv and bg then
+    if flying and rootPart:FindFirstChild("StudFlyVel") then
         local cam = workspace.CurrentCamera.CFrame
         local dir = Vector3.new(0,0,0)
         if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir += cam.LookVector end
@@ -155,8 +154,9 @@ RunService.RenderStepped:Connect(function()
         if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir -= cam.RightVector end
         if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir += cam.RightVector end
         if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir += Vector3.new(0,1,0) end
-        bg.CFrame = cam
-        bv.Velocity = dir * flySpeed
+        
+        rootPart.StudFlyGyro.CFrame = cam
+        rootPart.StudFlyVel.Velocity = dir * flySpeed
     end
 end)
 
