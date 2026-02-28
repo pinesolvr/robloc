@@ -1,0 +1,157 @@
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local rootPart = character:WaitForChild("HumanoidRootPart")
+local humanoid = character:WaitForChild("Humanoid")
+
+-- [[ GLOBAL STATES ]] --
+local flying = false
+local noclip = false
+local godMode = false
+local autoTPCollect = false
+local flySpeed = 70
+local customWalkSpeed = 16
+local baseCFrame = rootPart.CFrame
+
+-- [[ UI SETUP ]] --
+local screenGui = Instance.new("ScreenGui", player.PlayerGui)
+screenGui.Name = "StudUltimateUI"
+
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0, 260, 0, 580)
+frame.Position = UDim2.new(0.5, -130, 0.1, 0)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.BorderSizePixel = 4
+frame.BorderColor3 = Color3.fromRGB(255, 215, 0)
+frame.Active = true
+frame.Draggable = true
+Instance.new("UIStroke", frame).Thickness = 3
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 35)
+title.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+title.Text = "STUD ULTIMATE EDITION"
+title.TextColor3 = Color3.new(0,0,0)
+title.Font = Enum.Font.FredokaOne
+title.TextSize = 18
+
+-- Button Helper
+local function createBtn(text, pos, color, func)
+    local btn = Instance.new("TextButton", frame)
+    btn.Size = UDim2.new(0.9, 0, 0, 32)
+    btn.Position = pos
+    btn.BackgroundColor3 = color
+    btn.Text = text
+    btn.Font = Enum.Font.FredokaOne
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.TextSize = 13
+    btn.MouseButton1Click:Connect(func)
+    Instance.new("UICorner", btn)
+    return btn
+end
+
+-- [[ CORE LOGIC ]] --
+
+-- 1. Improved Fly (BodyVelocity)
+local function toggleFly()
+    flying = not flying
+    if flying then
+        local bv = Instance.new("BodyVelocity", rootPart)
+        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bv.Velocity = Vector3.new(0,0.1,0)
+        bv.Name = "UltimateFly"
+        task.spawn(function()
+            while flying do
+                local cam = workspace.CurrentCamera.CFrame
+                local dir = Vector3.new(0,0,0)
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.RightVector end
+                bv.Velocity = dir * flySpeed
+                task.wait()
+            end
+            if rootPart:FindFirstChild("UltimateFly") then rootPart.UltimateFly:Destroy() end
+        end)
+    end
+end
+
+-- 2. Anti-Death (Health Freeze)
+task.spawn(function()
+    while task.wait() do
+        if godMode then
+            local hum = player.Character:FindFirstChildOfClass("Humanoid")
+            if hum then hum.Health = hum.MaxHealth end
+        end
+    end
+end)
+
+-- 3. Auto TP-Pickup (Blinks to items and back)
+task.spawn(function()
+    while task.wait(0.7) do
+        if autoTPCollect then
+            for _, v in pairs(workspace:GetDescendants()) do
+                if (v.Name:find("Block") or v.Name:find("Rot") or v.Name:find("Lucky")) then
+                    local targetPos = nil
+                    if v:IsA("BasePart") then targetPos = v.CFrame elseif v:IsA("Model") then targetPos = v:GetModelCFrame() end
+                    
+                    if targetPos then
+                        local lastPos = rootPart.CFrame
+                        rootPart.CFrame = targetPos
+                        firetouchinterest(rootPart, v:IsA("Model") and v.PrimaryPart or v, 0)
+                        task.wait(0.1)
+                        firetouchinterest(rootPart, v:IsA("Model") and v.PrimaryPart or v, 1)
+                        rootPart.CFrame = lastPos
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- 4. Shark & Boat Timer Bypasses
+local function disableSharks()
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v.Name:lower():find("shark") and v:IsA("Model") then
+            v:MoveTo(Vector3.new(0, -1000, 0))
+        end
+    end
+end
+
+-- [[ BUTTON ASSIGNMENTS ]] --
+createBtn("AUTO TP-PICKUP: TOGGLE", UDim2.new(0.05, 0, 0.08, 0), Color3.fromRGB(130, 0, 255), function() autoTPCollect = not autoTPCollect end)
+createBtn("GOD MODE: TOGGLE", UDim2.new(0.05, 0, 0.15, 0), Color3.fromRGB(0, 150, 50), function() godMode = not godMode end)
+createBtn("DISABLE SHARKS", UDim2.new(0.05, 0, 0.22, 0), Color3.fromRGB(0, 100, 200), disableSharks)
+createBtn("GIVE 999 SPINS (VISUAL)", UDim2.new(0.05, 0, 0.29, 0), Color3.fromRGB(255, 180, 0), function()
+    for _, v in pairs(player.PlayerGui:GetDescendants()) do
+        if v:IsA("TextLabel") and (v.Text:find("Spins") or v.Name:find("Spin")) then v.Text = "999 Spins" end
+    end
+end)
+createBtn("FREE JAIL SHARK (ATMPT)", UDim2.new(0.05, 0, 0.36, 0), Color3.fromRGB(0, 0, 150), function()
+    local r = game:GetService("ReplicatedStorage"):FindFirstChild("JailShark", true)
+    if r then r:FireServer() end
+end)
+createBtn("FLY: TOGGLE (F)", UDim2.new(0.05, 0, 0.43, 0), Color3.fromRGB(200, 0, 0), toggleFly)
+createBtn("NOCLIP: TOGGLE", UDim2.new(0.05, 0, 0.50, 0), Color3.fromRGB(80, 80, 80), function() noclip = not noclip end)
+createBtn("TP TO BASE", UDim2.new(0.05, 0, 0.57, 0), Color3.fromRGB(100, 100, 100), function() rootPart.CFrame = baseCFrame end)
+createBtn("SET BASE HERE", UDim2.new(0.05, 0, 0.64, 0), Color3.fromRGB(60, 60, 60), function() baseCFrame = rootPart.CFrame end)
+
+-- Noclip Handler
+RunService.Stepped:Connect(function()
+    if noclip and character then
+        for _, part in pairs(character:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+    end
+end)
+
+-- Keybinds
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode == Enum.KeyCode.F then toggleFly() end
+    if input.KeyCode == Enum.KeyCode.RightAlt then frame.Visible = not frame.Visible end
+end)
+
+print("STUD ULTIMATE LOADED - Press RightAlt to Hide UI")
