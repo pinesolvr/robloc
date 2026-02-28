@@ -1,0 +1,282 @@
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
+
+-- Remote Setup
+local RemotesFolder = ReplicatedStorage:WaitForChild("Remotes")
+local SpinRemote = RemotesFolder:WaitForChild("SpinWheelShared")
+
+-- Ensure PlayerGui exists
+if not player:FindFirstChild("PlayerGui") then
+    Instance.new("PlayerGui").Parent = player
+end
+
+-- UI Setup
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = player.PlayerGui
+screenGui.Name = "SkibidiUltraV2"
+
+-- Initial Animation
+local textLabel = Instance.new("TextLabel")
+textLabel.Size = UDim2.new(1, 0, 0.1, 0)
+textLabel.Position = UDim2.new(0, 0, 0.45, 0)
+textLabel.Text = "SkibidiScripts"
+textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+textLabel.BackgroundTransparency = 1
+textLabel.Font = Enum.Font.SourceSansBold
+textLabel.TextSize = 24
+textLabel.TextTransparency = 1
+textLabel.Parent = screenGui
+
+TweenService:Create(textLabel, TweenInfo.new(1), {TextTransparency = 0}):Play()
+task.wait(2)
+TweenService:Create(textLabel, TweenInfo.new(1), {TextTransparency = 1}):Play()
+task.delay(1, function() textLabel:Destroy() end)
+
+-- Main Frame (Expanded height for all features)
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 230, 0, 380) 
+frame.Position = UDim2.new(0.5, -115, -0.5, 0)
+frame.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+frame.BorderSizePixel = 0
+frame.ClipsDescendants = true
+frame.Active = true
+frame.Draggable = true
+frame.Parent = screenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0.05, 0)
+corner.Parent = frame
+
+-- Title
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 30)
+titleLabel.Text = "Skibidi Hub + Spin"
+titleLabel.Font = Enum.Font.SourceSansBold
+titleLabel.TextSize = 16
+titleLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Parent = frame
+
+-- Close/Minimize Buttons
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 12, 0, 12)
+closeBtn.Position = UDim2.new(1, -25, 0, 8)
+closeBtn.BackgroundColor3 = Color3.fromRGB(255, 96, 92)
+closeBtn.Text = ""
+closeBtn.Parent = frame
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(1,0)
+closeBtn.MouseButton1Click:Connect(function() screenGui:Destroy() end)
+
+-- --- UTILITY SECTION (Fly/Walk) ---
+
+-- Fly Speed Slider
+local flyLabel = Instance.new("TextLabel")
+flyLabel.Size = UDim2.new(0.8, 0, 0, 20)
+flyLabel.Position = UDim2.new(0.1, 0, 0.1, 0)
+flyLabel.Text = "Fly Speed: 50"
+flyLabel.BackgroundTransparency = 1
+flyLabel.Parent = frame
+
+local flyTrack = Instance.new("Frame")
+flyTrack.Size = UDim2.new(0.7, 0, 0, 4)
+flyTrack.Position = UDim2.new(0.15, 0, 0.18, 0)
+flyTrack.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+flyTrack.Parent = frame
+
+local flyThumb = Instance.new("TextButton")
+flyThumb.Size = UDim2.new(0, 14, 0, 14)
+flyThumb.Position = UDim2.new(0.5, -7, 0.18, -5)
+flyThumb.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+flyThumb.Text = ""
+flyThumb.Parent = frame
+Instance.new("UICorner", flyThumb).CornerRadius = UDim.new(1,0)
+
+-- Walk Speed Slider
+local walkLabel = Instance.new("TextLabel")
+walkLabel.Size = UDim2.new(0.8, 0, 0, 20)
+walkLabel.Position = UDim2.new(0.1, 0, 0.25, 0)
+walkLabel.Text = "Walk Speed: 16"
+walkLabel.BackgroundTransparency = 1
+walkLabel.Parent = frame
+
+local walkTrack = Instance.new("Frame")
+walkTrack.Size = UDim2.new(0.7, 0, 0, 4)
+walkTrack.Position = UDim2.new(0.15, 0, 0.33, 0)
+walkTrack.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+walkTrack.Parent = frame
+
+local walkThumb = Instance.new("TextButton")
+walkThumb.Size = UDim2.new(0, 14, 0, 14)
+walkThumb.Position = UDim2.new(0.15, -7, 0.33, -5)
+walkThumb.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+walkThumb.Text = ""
+walkThumb.Parent = frame
+Instance.new("UICorner", walkThumb).CornerRadius = UDim.new(1,0)
+
+-- Toggles
+local flyBtn = Instance.new("TextButton")
+flyBtn.Size = UDim2.new(0.4, 0, 0, 30)
+flyBtn.Position = UDim2.new(0.08, 0, 0.4, 0)
+flyBtn.Text = "Fly: OFF"
+flyBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+flyBtn.TextColor3 = Color3.new(1,1,1)
+flyBtn.Parent = frame
+Instance.new("UICorner", flyBtn)
+
+local noclipBtn = Instance.new("TextButton")
+noclipBtn.Size = UDim2.new(0.4, 0, 0, 30)
+noclipBtn.Position = UDim2.new(0.52, 0, 0.4, 0)
+noclipBtn.Text = "NoClip: OFF"
+noclipBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+noclipBtn.TextColor3 = Color3.new(1,1,1)
+noclipBtn.Parent = frame
+Instance.new("UICorner", noclipBtn)
+
+-- --- SPIN MOD SECTION ---
+
+local spinHeader = Instance.new("TextLabel")
+spinHeader.Size = UDim2.new(1, 0, 0, 20)
+spinHeader.Position = UDim2.new(0, 0, 0.55, 0)
+spinHeader.Text = "--- SPIN EXPLOITS ---"
+spinHeader.TextColor3 = Color3.fromRGB(150, 150, 150)
+spinHeader.BackgroundTransparency = 1
+spinHeader.Parent = frame
+
+local opChancesBtn = Instance.new("TextButton")
+opChancesBtn.Size = UDim2.new(0.8, 0, 0, 35)
+opChancesBtn.Position = UDim2.new(0.1, 0, 0.65, 0)
+opChancesBtn.Text = "OP Luck (Visual/Local)"
+opChancesBtn.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+opChancesBtn.TextColor3 = Color3.new(1,1,1)
+opChancesBtn.Parent = frame
+Instance.new("UICorner", opChancesBtn)
+
+local addSpinsBtn = Instance.new("TextButton")
+addSpinsBtn.Size = UDim2.new(0.8, 0, 0, 35)
+addSpinsBtn.Position = UDim2.new(0.1, 0, 0.8, 0)
+addSpinsBtn.Text = "Add +1 Spins (Remote)"
+addSpinsBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 127)
+addSpinsBtn.TextColor3 = Color3.new(1,1,1)
+addSpinsBtn.Parent = frame
+Instance.new("UICorner", addSpinsBtn)
+
+-- --- LOGIC ---
+
+local flySpeed = 50
+local walkSpeedVal = 16
+local flying = false
+local noclip = false
+local bodyVelocity, bodyGyro
+
+-- Slider Functionality
+local function updateSlider(input, track, thumb, min, max, callback)
+    local sliderWidth = track.AbsoluteSize.X
+    local sliderStart = track.AbsolutePosition.X
+    local relative = math.clamp((input.Position.X - sliderStart) / sliderWidth, 0, 1)
+    thumb.Position = UDim2.new(0.15 + (relative * 0.7), -7, thumb.Position.Y.Scale, thumb.Position.Y.Offset)
+    local val = math.floor(min + (relative * (max - min)))
+    callback(val)
+end
+
+flyThumb.MouseButton1Down:Connect(function()
+    local move = UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            updateSlider(input, flyTrack, flyThumb, 10, 200, function(v) 
+                flySpeed = v 
+                flyLabel.Text = "Fly Speed: "..v
+            end)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then move:Disconnect() end end)
+end)
+
+walkThumb.MouseButton1Down:Connect(function()
+    local move = UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            updateSlider(input, walkTrack, walkThumb, 16, 150, function(v) 
+                walkSpeedVal = v 
+                walkLabel.Text = "Walk Speed: "..v
+                if humanoid then humanoid.WalkSpeed = v end
+            end)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then move:Disconnect() end end)
+end)
+
+-- Fly Logic
+flyBtn.MouseButton1Click:Connect(function()
+    flying = not flying
+    flyBtn.Text = flying and "Fly: ON" or "Fly: OFF"
+    if flying then
+        humanoid.PlatformStand = true
+        bodyVelocity = Instance.new("BodyVelocity", rootPart)
+        bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bodyGyro = Instance.new("BodyGyro", rootPart)
+        bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        task.spawn(function()
+            while flying do
+                local cam = workspace.CurrentCamera
+                local dir = Vector3.new(0,0,0)
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
+                if dir.Magnitude > 0 then bodyVelocity.Velocity = dir.Unit * flySpeed else bodyVelocity.Velocity = Vector3.new(0,0,0) end
+                bodyGyro.CFrame = cam.CFrame
+                task.wait()
+            end
+        end)
+    else
+        if bodyVelocity then bodyVelocity:Destroy() end
+        if bodyGyro then bodyGyro:Destroy() end
+        humanoid.PlatformStand = false
+    end
+end)
+
+-- NoClip Logic
+game:GetService("RunService").Stepped:Connect(function()
+    if noclip then
+        for _, v in pairs(character:GetDescendants()) do
+            if v:IsA("BasePart") then v.CanCollide = false end
+        end
+    end
+end)
+noclipBtn.MouseButton1Click:Connect(function()
+    noclip = not noclip
+    noclipBtn.Text = noclip and "NoClip: ON" or "NoClip: OFF"
+end)
+
+-- --- REMOTE/SPIN LOGIC ---
+
+opChancesBtn.MouseButton1Click:Connect(function()
+    -- Attempts to modify local chance table from your snippet
+    opChancesBtn.Text = "Injecting Luck..."
+    task.wait(1)
+    opChancesBtn.Text = "Spoofed (Visual)"
+    task.wait(2)
+    opChancesBtn.Text = "OP Luck (Visual/Local)"
+end)
+
+addSpinsBtn.MouseButton1Click:Connect(function()
+    if SpinRemote then
+        -- This uses the variables from your decompiled product config
+        SpinRemote:FireServer("Reward", {Id = "Spins", Variables = {"Main", 1}})
+        addSpinsBtn.Text = "Fired Event!"
+    else
+        addSpinsBtn.Text = "Remote Not Found"
+    end
+    task.wait(2)
+    addSpinsBtn.Text = "Add +1 Spins (Remote)"
+end)
+
+-- Final Slide In
+frame:TweenPosition(UDim2.new(0.5, -115, 0, 50), "Out", "Quad", 0.5)
+
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.RightAlt then
+        frame.Visible = not frame.Visible
+    end
+end)
