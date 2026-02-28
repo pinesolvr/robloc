@@ -12,51 +12,30 @@ screenGui.Parent = player.PlayerGui
 screenGui.Name = "StudFlyUI"
 screenGui.ResetOnSpawn = false
 
--- Intro Text (Cleaned up)
-local textLabel = Instance.new("TextLabel")
-textLabel.Size = UDim2.new(1, 0, 0.1, 0)
-textLabel.Position = UDim2.new(0, 0, 0.45, 0)
-textLabel.Text = "SKIBIDI STUD EDITION"
-textLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-textLabel.BackgroundTransparency = 1
-textLabel.Font = Enum.Font.RobotoMono
-textLabel.TextSize = 35
-textLabel.Parent = screenGui
-
-task.delay(2, function()
-    TweenService:Create(textLabel, TweenInfo.new(1), {TextTransparency = 1}):Play()
-    task.wait(1)
-    textLabel:Destroy()
-end)
-
 -- Main Frame
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 250, 0, 320)
-frame.Position = UDim2.new(0.5, -125, -0.5, 0)
+frame.Size = UDim2.new(0, 250, 0, 400) -- Increased size for new slider
+frame.Position = UDim2.new(0.5, -125, 0.1, 0)
 frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.BorderSizePixel = 0
 frame.Active = true
 frame.Draggable = true
 frame.Parent = screenGui
-
-local corner = Instance.new("UICorner")
-corner.Parent = frame
+Instance.new("UICorner", frame)
 
 -- Title
-local titleLabel = Instance.new("TextLabel")
-local titleCorner = Instance.new("UICorner")
+local titleLabel = Instance.new("TextLabel", frame)
 titleLabel.Size = UDim2.new(1, 0, 0, 30)
 titleLabel.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
-titleLabel.Text = "STUD EXPLOIT"
+titleLabel.Text = "STUD EXPLOIT (BRAINROT ED.)"
 titleLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
 titleLabel.Font = Enum.Font.FredokaOne
-titleLabel.TextSize = 18
-titleLabel.Parent = frame
-titleCorner.Parent = titleLabel
+titleLabel.TextSize = 16
+Instance.new("UICorner", titleLabel)
 
--- Helper Function
+-- Helper Button Function
 local function createStudButton(name, pos, color)
-    local btn = Instance.new("TextButton")
+    local btn = Instance.new("TextButton", frame)
     btn.Name = name
     btn.Size = UDim2.new(0.8, 0, 0, 35)
     btn.Position = pos
@@ -64,29 +43,35 @@ local function createStudButton(name, pos, color)
     btn.Font = Enum.Font.FredokaOne
     btn.TextSize = 16
     btn.TextColor3 = Color3.new(1,1,1)
-    btn.Parent = frame
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
     return btn
 end
 
-local flyButton = createStudButton("FlyBtn", UDim2.new(0.1, 0, 0.15, 0), Color3.fromRGB(200, 0, 0))
+local flyButton = createStudButton("FlyBtn", UDim2.new(0.1, 0, 0.1, 0), Color3.fromRGB(200, 0, 0))
 flyButton.Text = "FLY: OFF"
 
-local noclipButton = createStudButton("NoclipBtn", UDim2.new(0.1, 0, 0.3, 0), Color3.fromRGB(50, 50, 50))
+local noclipButton = createStudButton("NoclipBtn", UDim2.new(0.1, 0, 0.22, 0), Color3.fromRGB(50, 50, 50))
 noclipButton.Text = "NOCLIP: OFF"
 
-local walkSpeedButton = createStudButton("WalkBtn", UDim2.new(0.1, 0, 0.45, 0), Color3.fromRGB(0, 100, 200))
-walkSpeedButton.Text = "WALK SPEED: OFF"
+local walkButton = createStudButton("WalkBtn", UDim2.new(0.1, 0, 0.34, 0), Color3.fromRGB(0, 100, 200))
+walkButton.Text = "WALK SPEED: OFF"
 
 -- Variables
-local flySpeed = 50
-local customWalkSpeed = 16
-local flying = false
-local noclip = false
-local walkSpeedEnabled = false
+local flySpeed, boatSpeed, walkSpeedVal = 50, 50, 16
+local flying, noclip, walkEnabled = false, false, false
 local flyConnection
 
--- Optimized Fly Logic
+-- Boat Speed Logic
+local function updateBoatSpeed(val)
+    boatSpeed = val
+    if humanoid.SeatPart and humanoid.SeatPart:IsA("VehicleSeat") then
+        local seat = humanoid.SeatPart
+        seat.MaxSpeed = val
+        seat.Torque = val * 2 -- Ensures enough power to push the boat
+    end
+end
+
+-- Fly Logic
 local function toggleFly()
     flying = not flying
     flyButton.Text = "FLY: " .. (flying and "ON" or "OFF")
@@ -98,17 +83,14 @@ local function toggleFly()
         bg.Name = "FlyGyro"
         bg.P = 9e4
         bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-        bg.CFrame = rootPart.CFrame
         
         local bv = Instance.new("BodyVelocity", rootPart)
         bv.Name = "FlyVelocity"
-        bv.Velocity = Vector3.new(0,0,0)
         bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
 
         flyConnection = RunService.RenderStepped:Connect(function()
             local cam = workspace.CurrentCamera.CFrame
             local moveDir = Vector3.new(0,0,0)
-            
             if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir += cam.LookVector end
             if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir -= cam.LookVector end
             if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir -= cam.RightVector end
@@ -117,11 +99,7 @@ local function toggleFly()
             if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir -= Vector3.new(0,1,0) end
             
             bg.CFrame = cam
-            if moveDir.Magnitude > 0 then
-                bv.Velocity = moveDir.Unit * flySpeed
-            else
-                bv.Velocity = Vector3.new(0,0,0)
-            end
+            bv.Velocity = (moveDir.Magnitude > 0) and (moveDir.Unit * flySpeed) or Vector3.new(0,0,0)
         end)
     else
         if flyConnection then flyConnection:Disconnect() end
@@ -131,32 +109,8 @@ local function toggleFly()
     end
 end
 
--- Optimized Noclip (No Lag)
-local function toggleNoclip()
-    noclip = not noclip
-    noclipButton.Text = "NOCLIP: " .. (noclip and "ON" or "OFF")
-    noclipButton.BackgroundColor3 = noclip and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(50, 50, 50)
-end
-
-RunService.Stepped:Connect(function()
-    if noclip and character then
-        for _, part in pairs(character:GetChildren()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
-    end
-end)
-
--- Walkspeed
-local function toggleWalk()
-    walkSpeedEnabled = not walkSpeedEnabled
-    walkSpeedButton.Text = "WALK: " .. (walkSpeedEnabled and "ON" or "OFF")
-    humanoid.WalkSpeed = walkSpeedEnabled and customWalkSpeed or 16
-end
-
--- Slider Logic
-local function createSlider(labelName, pos, min, max, default)
+-- Slider Function
+local function createSlider(labelName, pos, min, max, default, callback)
     local label = Instance.new("TextLabel", frame)
     label.Size = UDim2.new(0.8, 0, 0, 20)
     label.Position = pos
@@ -168,7 +122,7 @@ local function createSlider(labelName, pos, min, max, default)
     local track = Instance.new("Frame", frame)
     track.Size = UDim2.new(0.8, 0, 0, 6)
     track.Position = pos + UDim2.new(0, 0, 0, 22)
-    track.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    track.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 
     local thumb = Instance.new("TextButton", track)
     thumb.Size = UDim2.new(0, 15, 0, 15)
@@ -182,31 +136,40 @@ local function createSlider(labelName, pos, min, max, default)
     
     RunService.RenderStepped:Connect(function()
         if dragging then
-            local mousePos = UserInputService:GetMouseLocation().X
-            local relativePos = math.clamp((mousePos - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+            local relativePos = math.clamp((UserInputService:GetMouseLocation().X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
             thumb.Position = UDim2.new(relativePos, -7, 0.5, -7)
             local val = math.floor(min + (relativePos * (max - min)))
             label.Text = labelName .. ": " .. val
-            if labelName == "Fly Speed" then flySpeed = val 
-            else 
-                customWalkSpeed = val 
-                if walkSpeedEnabled then humanoid.WalkSpeed = val end
-            end
+            callback(val)
         end
     end)
 end
 
-createSlider("Fly Speed", UDim2.new(0.1, 0, 0.62, 0), 10, 500, 50)
-createSlider("Walk Speed", UDim2.new(0.1, 0, 0.78, 0), 16, 500, 16)
+-- Create Sliders
+createSlider("Fly Speed", UDim2.new(0.1, 0, 0.48, 0), 10, 500, 50, function(v) flySpeed = v end)
+createSlider("Walk Speed", UDim2.new(0.1, 0, 0.64, 0), 16, 500, 16, function(v) 
+    walkSpeedVal = v 
+    if walkEnabled then humanoid.WalkSpeed = v end 
+end)
+createSlider("Boat Speed", UDim2.new(0.1, 0, 0.80, 0), 20, 1000, 50, updateBoatSpeed)
 
+-- Connections
 flyButton.MouseButton1Click:Connect(toggleFly)
 noclipButton.MouseButton1Click:Connect(toggleNoclip)
-walkSpeedButton.MouseButton1Click:Connect(toggleWalk)
-
-UserInputService.InputBegan:Connect(function(i, g)
-    if g then return end
-    if i.KeyCode == Enum.KeyCode.RightAlt then frame.Visible = not frame.Visible end
-    if i.KeyCode == Enum.KeyCode.F then toggleFly() end
+walkButton.MouseButton1Click:Connect(function()
+    walkEnabled = not walkEnabled
+    walkButton.Text = "WALK: " .. (walkEnabled and "ON" or "OFF")
+    humanoid.WalkSpeed = walkEnabled and walkSpeedVal or 16
 end)
 
-TweenService:Create(frame, TweenInfo.new(0.5, Enum.EasingStyle.Back), {Position = UDim2.new(0.5, -125, 0.1, 0)}):Play()
+RunService.Stepped:Connect(function()
+    if noclip and character then
+        for _, part in pairs(character:GetChildren()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(i, g)
+    if not g and i.KeyCode == Enum.KeyCode.RightAlt then frame.Visible = not frame.Visible end
+end)
