@@ -1,0 +1,140 @@
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
+
+-- UI Setup
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = player.PlayerGui
+screenGui.Name = "StudFlyUI"
+screenGui.ResetOnSpawn = false
+
+-- Main Frame (Expanded for new features)
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 260, 0, 500) -- Increased height
+frame.Position = UDim2.new(0.5, -130, 0.1, 0)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BorderSizePixel = 4
+frame.BorderColor3 = Color3.fromRGB(255, 215, 0)
+frame.Active = true
+frame.Draggable = true
+frame.Parent = screenGui
+
+local stroke = Instance.new("UIStroke")
+stroke.Thickness = 3
+stroke.Color = Color3.fromRGB(0, 0, 0)
+stroke.Parent = frame
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 30)
+titleLabel.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+titleLabel.Text = "STUD EXPLOIT: BRAINROT ED."
+titleLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
+titleLabel.Font = Enum.Font.FredokaOne
+titleLabel.TextSize = 18
+titleLabel.Parent = frame
+
+-- Helper Function for Buttons
+local function createStudButton(name, pos, color, text)
+    local btn = Instance.new("TextButton")
+    btn.Name = name
+    btn.Size = UDim2.new(0.85, 0, 0, 30)
+    btn.Position = pos
+    btn.BackgroundColor3 = color
+    btn.Font = Enum.Font.FredokaOne
+    btn.TextSize = 14
+    btn.Text = text
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.Parent = frame
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+    return btn
+end
+
+-- --- FEATURE BUTTONS ---
+local flyBtn = createStudButton("FlyBtn", UDim2.new(0.075, 0, 0.08, 0), Color3.fromRGB(200, 0, 0), "FLY: OFF")
+local noclipBtn = createStudButton("NoclipBtn", UDim2.new(0.075, 0, 0.15, 0), Color3.fromRGB(50, 50, 50), "NOCLIP: OFF")
+local sharkBtn = createStudButton("SharkBtn", UDim2.new(0.075, 0, 0.22, 0), Color3.fromRGB(0, 120, 200), "DISABLE SHARKS: OFF")
+local bringBtn = createStudButton("BringBtn", UDim2.new(0.075, 0, 0.29, 0), Color3.fromRGB(150, 0, 255), "BRING LUCKYBLOCKS/ROT")
+local timerBtn = createStudButton("TimerBtn", UDim2.new(0.075, 0, 0.36, 0), Color3.fromRGB(200, 100, 0), "FREEZE BOAT TIMER")
+local spinBtn = createStudButton("SpinBtn", UDim2.new(0.075, 0, 0.43, 0), Color3.fromRGB(0, 200, 100), "GIVE 100 SPINS (UI ONLY)")
+
+-- --- LOGIC VARIABLES ---
+local sharksDisabled = false
+local timerFrozen = false
+local flying = false
+local noclip = false
+local flySpeed = 50
+
+-- --- FUNCTIONS ---
+
+-- 1. Disable Sharks (Hides them and moves them far away)
+sharkBtn.MouseButton1Click:Connect(function()
+    sharksDisabled = not sharksDisabled
+    sharkBtn.Text = "DISABLE SHARKS: " .. (sharksDisabled and "ON" or "OFF")
+    sharkBtn.BackgroundColor3 = sharksDisabled and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(0, 120, 200)
+    
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj.Name:lower():find("shark") and obj:IsA("Model") then
+            if sharksDisabled then
+                obj:MoveTo(Vector3.new(0, -1000, 0)) -- Move under map
+            else
+                obj:MoveTo(rootPart.Position + Vector3.new(0, 20, 50)) -- Bring back near
+            end
+        end
+    end
+end)
+
+-- 2. Bring LuckyBlocks and Brainrots
+bringBtn.MouseButton1Click:Connect(function()
+    local count = 0
+    for _, item in pairs(workspace:GetDescendants()) do
+        if (item.Name:lower():find("luckyblock") or item.Name:lower():find("brainrot")) and item:IsA("BasePart") then
+            item.CFrame = rootPart.CFrame + Vector3.new(0, 3, 0)
+            count += 1
+        elseif item:IsA("Model") and (item.Name:lower():find("luckyblock") or item.Name:lower():find("brainrot")) then
+            item:MoveTo(rootPart.Position + Vector3.new(0, 3, 0))
+            count += 1
+        end
+    end
+    print("Brought " .. count .. " items!")
+end)
+
+-- 3. Boat Time Limit (Client-side bypass attempt)
+timerBtn.MouseButton1Click:Connect(function()
+    timerFrozen = not timerFrozen
+    timerBtn.Text = "TIMER: " .. (timerFrozen and "FROZEN" or "NORMAL")
+    -- Note: Most timers are server-sided. This helps stop client UI updates.
+    if timerFrozen then
+        local timerUI = player.PlayerGui:FindFirstChild("Timer", true) or player.PlayerGui:FindFirstChild("Clock", true)
+        if timerUI then timerUI.Enabled = false end
+    end
+end)
+
+-- 4. Give 100 Spins (Visual/Local Update)
+spinBtn.MouseButton1Click:Connect(function()
+    -- This updates your local UI values. Real spins usually require Server access.
+    local spinLabel = player.PlayerGui:FindFirstChild("SpinCount", true) or player.PlayerGui:FindFirstChild("Spins", true)
+    if spinLabel and (spinLabel:IsA("TextLabel") or spinLabel:IsA("TextBox")) then
+        spinLabel.Text = "100"
+    end
+end)
+
+-- --- RE-ADD ORIGINAL FLY/NOCLIP LOGIC ---
+-- (Include your original Fly and Noclip functions here)
+
+flyBtn.MouseButton1Click:Connect(function()
+    flying = not flying
+    flyBtn.Text = "FLY: " .. (flying and "ON" or "OFF")
+    -- Insert your existing BodyVelocity logic here
+end)
+
+noclipBtn.MouseButton1Click:Connect(function()
+    noclip = not noclip
+    noclipBtn.Text = "NOCLIP: " .. (noclip and "ON" or "OFF")
+    -- Insert your existing Stepped logic here
+end)
+
+print("SKIBIDI STUD EDITION LOADED")
