@@ -1,0 +1,154 @@
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
+
+-- UI Setup
+local screenGui = Instance.new("ScreenGui", player.PlayerGui)
+screenGui.Name = "CelestialStudUI"
+screenGui.ResetOnSpawn = false
+
+-- Main Frame (Modern Dark Style)
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0, 260, 0, 450)
+frame.Position = UDim2.new(0.5, -130, 0.2, 0)
+frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+Instance.new("UICorner", frame)
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 40)
+title.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+title.Text = "CELESTIAL BRAINROT"
+title.TextColor3 = Color3.new(0,0,0)
+title.Font = Enum.Font.FredokaOne
+title.TextSize = 18
+Instance.new("UICorner", title)
+
+-- Variables
+local flySpeed = 100
+local flying = false
+local sharksFrozen = false
+local bv, bg -- Body objects for flying
+
+-- Optimized Button Function
+local function createBtn(text, pos, color, callback)
+    local btn = Instance.new("TextButton", frame)
+    btn.Size = UDim2.new(0.85, 0, 0, 35)
+    btn.Position = pos
+    btn.BackgroundColor3 = color
+    btn.Text = text
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.TextSize = 16
+    Instance.new("UICorner", btn)
+    btn.MouseButton1Click:Connect(callback)
+    return btn
+end
+
+-- 1. FLY LOGIC
+local function toggleFly()
+    flying = not flying
+    if flying then
+        humanoid.PlatformStand = true
+        bv = Instance.new("BodyVelocity", rootPart)
+        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bv.Velocity = Vector3.new(0,0,0)
+        bg = Instance.new("BodyGyro", rootPart)
+        bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        bg.P = 15000
+    else
+        if bv then bv:Destroy() end
+        if bg then bg:Destroy() end
+        humanoid.PlatformStand = false
+    end
+end
+
+createBtn("TOGGLE FLY (F)", UDim2.new(0.075, 0, 0.12, 0), Color3.fromRGB(80, 80, 80), toggleFly)
+
+-- 2. FREEZE SHARKS
+createBtn("FREEZE SHARKS", UDim2.new(0.075, 0, 0.22, 0), Color3.fromRGB(0, 120, 200), function()
+    sharksFrozen = not sharksFrozen
+end)
+
+task.spawn(function()
+    while task.wait(1) do 
+        if sharksFrozen then
+            for _, v in pairs(workspace:GetDescendants()) do
+                if v.Name:lower():find("shark") and v:IsA("BasePart") then
+                    v.Anchored = true
+                end
+            end
+        end
+    end
+end)
+
+-- 3. SPAWN CELESTIAL
+createBtn("SPAWN CELESTIAL", UDim2.new(0.075, 0, 0.32, 0), Color3.fromRGB(255, 100, 0), function()
+    local remotes = {
+        game:GetService("ReplicatedStorage"):FindFirstChild("SpawnCelestial"),
+        game:GetService("ReplicatedStorage"):FindFirstChild("SummonCelestial"),
+        game:GetService("ReplicatedStorage"):FindFirstChild("CelestialRemote")
+    }
+    for _, r in pairs(remotes) do
+        if r then r:FireServer() end
+    end
+end)
+
+-- 4. ADD 10 TRILLION CASH
+createBtn("ADD 10T CASH", UDim2.new(0.075, 0, 0.42, 0), Color3.fromRGB(0, 200, 100), function()
+    local leaderstats = player:FindFirstChild("leaderstats")
+    if leaderstats then
+        local cash = leaderstats:FindFirstChild("Cash") or leaderstats:FindFirstChild("Money")
+        if cash then
+            cash.Value = cash.Value + 10000000000000
+        end
+    end
+end)
+
+-- 5. SLIDER LOGIC (Continuation of your original script)
+local function createSlider(labelName, pos, min, max, default, callback)
+    local label = Instance.new("TextLabel", frame)
+    label.Size = UDim2.new(0.8, 0, 0, 20)
+    label.Position = pos
+    label.Text = labelName .. ": " .. default
+    label.TextColor3 = Color3.new(1,1,1)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.SourceSansBold
+
+    local track = Instance.new("Frame", frame)
+    track.Size = UDim2.new(0.85, 0, 0, 6)
+    track.Position = pos + UDim2.new(0, 0, 0, 22)
+    track.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+
+    local thumb = Instance.new("TextButton", track)
+    thumb.Size = UDim2.new(0, 14, 0, 14)
+    thumb.Position = UDim2.new(0, 0, 0.5, -7)
+    thumb.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+    thumb.Text = ""
+
+    local dragging = false
+    thumb.MouseButton1Down:Connect(function() dragging = true end)
+    UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+    
+    RunService.RenderStepped:Connect(function()
+        if dragging then
+            local mousePos = UserInputService:GetMouseLocation().X
+            local relativePos = math.clamp((mousePos - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+            thumb.Position = UDim2.new(relativePos, -7, 0.5, -7)
+            local val = math.floor(min + (max - min) * relativePos)
+            label.Text = labelName .. ": " .. val
+            callback(val)
+        end
+    end)
+end
+
+-- Example Slider usage for Speed (Adjust position to 0.55 to avoid overlap)
+createSlider("WalkSpeed", UDim2.new(0.1, 0, 0.55, 0), 16, 500, 16, function(v)
+    humanoid.WalkSpeed = v
+end)
